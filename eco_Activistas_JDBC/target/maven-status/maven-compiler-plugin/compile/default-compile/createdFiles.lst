@@ -5,6 +5,7 @@ IActivistaDAO.class
 IConexionBD.class
 ActivistasJFrame$1.class
 ConexionBD.class
+JFrameActivistas$1.class
 Activista.class
 JFrameActivistas.class
 PruebaVentana.class
