@@ -3,5 +3,7 @@ ActivistaDAO.class
 EcoActivistasDemoJDBC.class
 IActivistaDAO.class
 IConexionBD.class
+ActivistasJFrame$1.class
 ConexionBD.class
 Activista.class
+ActivistasJFrame.class
