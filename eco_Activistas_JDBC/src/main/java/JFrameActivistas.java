@@ -2,7 +2,12 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author omars
@@ -10,12 +15,32 @@
 public class JFrameActivistas extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(JFrameActivistas.class.getName());
+    
+    private IActivistaDAO activistaDAO;
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /**
      * Creates new form JFrameActivistas
      */
-    public JFrameActivistas() {
+        public JFrameActivistas() {
         initComponents();
+
+        // Conexion a la BD
+        String url = "jdbc:mysql://localhost:3306/eco_activistas_JDBC?useSSL=false&serverTimezone=UTC";
+        String user = "root";
+        String pass = "";
+
+        IConexionBD conexion = new ConexionBD(url, user, pass);
+        this.activistaDAO = new ActivistaDAO(conexion);
+
+        // Cargar datos
+        try {
+            cargarTabla();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                "Error al conectar con la base de datos:\n" + e.getMessage(),
+                "Error de conexion", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**
@@ -43,10 +68,12 @@ public class JFrameActivistas extends javax.swing.JFrame {
         btnAgregar = new javax.swing.JButton();
         btnActualizar = new javax.swing.JButton();
         btnEliminar = new javax.swing.JButton();
+        btnConsultar = new javax.swing.JButton();
         btnConsultarTodos = new javax.swing.JButton();
-        jButton5 = new javax.swing.JButton();
         btnLimpiar = new javax.swing.JButton();
         jLabel7 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -76,17 +103,24 @@ public class JFrameActivistas extends javax.swing.JFrame {
         txtTelefono.setName("txtTelefono"); // NOI18N
         txtTelefono.addActionListener(this::txtTelefonoActionPerformed);
 
+        txtFechaInicio.addActionListener(this::txtFechaInicioActionPerformed);
+
         jLabel2.setText("Nombre");
 
         btnAgregar.setText("Agregar");
+        btnAgregar.addActionListener(this::btnAgregarActionPerformed);
 
         btnActualizar.setText("Actualizar");
+        btnActualizar.addActionListener(this::btnActualizarActionPerformed);
 
         btnEliminar.setText("Eliminar");
+        btnEliminar.addActionListener(this::btnEliminarActionPerformed);
 
-        btnConsultarTodos.setText("Consultar");
+        btnConsultar.setText("Consultar");
+        btnConsultar.addActionListener(this::btnConsultarActionPerformed);
 
-        jButton5.setText("ConsultarTodos");
+        btnConsultarTodos.setText("ConsultarTodos");
+        btnConsultarTodos.addActionListener(this::btnConsultarTodosActionPerformed);
 
         btnLimpiar.setText("Limpiar");
         btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
@@ -132,9 +166,9 @@ public class JFrameActivistas extends javax.swing.JFrame {
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(btnConsultarTodos)
+                                .addComponent(btnConsultar)
                                 .addGap(18, 18, 18)
-                                .addComponent(jButton5))
+                                .addComponent(btnConsultarTodos))
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addComponent(btnAgregar, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
@@ -179,14 +213,27 @@ public class JFrameActivistas extends javax.swing.JFrame {
                     .addComponent(btnEliminar))
                 .addGap(27, 27, 27)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnConsultar)
                     .addComponent(btnConsultarTodos)
-                    .addComponent(jButton5)
                     .addComponent(btnLimpiar))
                 .addGap(34, 34, 34))
         );
 
         jLabel7.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
         jLabel7.setText("Datos de activista");
+
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
+            },
+            new String [] {
+                "ID", "Nombre", "Apellido paterno", "Apellido materno", "Telefono", "Fecha inicio"
+            }
+        ));
+        jScrollPane1.setViewportView(jTable1);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -196,11 +243,13 @@ public class JFrameActivistas extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
-                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 616, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(68, 68, 68)
                         .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(492, Short.MAX_VALUE))
+                .addContainerGap(23, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -208,7 +257,9 @@ public class JFrameActivistas extends javax.swing.JFrame {
                 .addGap(41, 41, 41)
                 .addComponent(jLabel7)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(117, Short.MAX_VALUE))
         );
 
@@ -236,8 +287,103 @@ public class JFrameActivistas extends javax.swing.JFrame {
     }//GEN-LAST:event_txtApellidoPaternoActionPerformed
 
     private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarActionPerformed
-        // TODO add your handling code here:
+                   limpiarFormulario();
+    }
     }//GEN-LAST:event_btnLimpiarActionPerformed
+
+    private void btnActualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnActualizarActionPerformed
+        String idTexto = txtID.getText().trim();
+        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a actualizar."); return; }
+        int id;
+        try { id = Integer.parseInt(idTexto); }
+        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
+        if (!validarCamposObligatorios()) return;
+        LocalDate fecha = parsearFecha();
+        if (fecha == null) return;
+
+        String apMat = txtApellidoMaterno.getText().trim();
+        Activista a = new Activista(id, txtNombre.getText().trim(), txtApellidoPaterno.getText().trim(),
+                apMat.isEmpty() ? null : apMat, txtTelefono.getText().trim(), fecha);
+
+        if (activistaDAO.actualizar(a)) {
+            jLabel7.setText("Activista actualizado correctamente.");
+            cargarTabla();
+            limpiarFormulario();
+        } else {
+            jLabel7.setText("No se pudo actualizar.");
+        }
+    }
+    }//GEN-LAST:event_btnActualizarActionPerformed
+
+    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
+        String idTexto = txtID.getText().trim();
+        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a eliminar."); return; }
+        int id;
+        try { id = Integer.parseInt(idTexto); }
+        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
+
+        int respuesta = JOptionPane.showConfirmDialog(this,
+                "Seguro que deseas eliminar el activista con ID " + id + "?",
+                "Confirmar", JOptionPane.YES_NO_OPTION);
+        if (respuesta != JOptionPane.YES_OPTION) return;
+
+        if (activistaDAO.eliminar(id)) {
+            jLabel7.setText("Activista eliminado correctamente.");
+            cargarTabla();
+            limpiarFormulario();
+        } else {
+            jLabel7.setText("No se pudo eliminar.");
+        }
+           // TODO add your handling code here:
+    }//GEN-LAST:event_btnEliminarActionPerformed
+
+    private void btnConsultarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConsultarActionPerformed
+         String idTexto = txtID.getText().trim();
+        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a consultar."); return; }
+        int id;
+        try { id = Integer.parseInt(idTexto); }
+        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
+
+        Activista a = activistaDAO.consultar(id);
+        if (a == null) { jLabel7.setText("No se encontro activista con ID " + id); return; }
+
+        txtNombre.setText(a.getNombre());
+        txtApellidoPaterno.setText(a.getApellidoPaterno());
+        txtApellidoMaterno.setText(a.getApellidoMaterno() != null ? a.getApellidoMaterno() : "");
+        txtTelefono.setText(a.getTelefono());
+        txtFechaInicio.setText(a.getFechaInicio().format(FORMATO_FECHA));
+        jLabel7.setText("Activista encontrado: " + a.getNombre());
+    
+    }//GEN-LAST:event_btnConsultarActionPerformed
+
+    private void btnConsultarTodosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConsultarTodosActionPerformed
+               cargarTabla();
+    
+    }//GEN-LAST:event_btnConsultarTodosActionPerformed
+
+    private void txtFechaInicioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtFechaInicioActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtFechaInicioActionPerformed
+
+    private void btnAgregarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarActionPerformed
+
+        if (!validarCamposObligatorios()) return;
+        LocalDate fecha = parsearFecha();
+        if (fecha == null) return;
+
+        String apMat = txtApellidoMaterno.getText().trim();
+        Activista a = new Activista(txtNombre.getText().trim(), txtApellidoPaterno.getText().trim(),
+                apMat.isEmpty() ? null : apMat, txtTelefono.getText().trim(), fecha);
+
+        if (activistaDAO.agregar(a)) {
+            jLabel7.setText("Activista agregado con ID: " + a.getId());
+            cargarTabla();
+            limpiarFormulario();
+        } else {
+            jLabel7.setText("Error al agregar el activista.");
+        }
+    }        // TODO add your handling code here:
+    }//GEN-LAST:event_btnAgregarActionPerformed
 
     /**
      * @param args the command line arguments
@@ -267,10 +413,10 @@ public class JFrameActivistas extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnActualizar;
     private javax.swing.JButton btnAgregar;
+    private javax.swing.JButton btnConsultar;
     private javax.swing.JButton btnConsultarTodos;
     private javax.swing.JButton btnEliminar;
     private javax.swing.JButton btnLimpiar;
-    private javax.swing.JButton jButton5;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -279,6 +425,8 @@ public class JFrameActivistas extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable jTable1;
     private javax.swing.JTextField txtApellidoMaterno;
     private javax.swing.JTextField txtApellidoPaterno;
     private javax.swing.JTextField txtFechaInicio;
