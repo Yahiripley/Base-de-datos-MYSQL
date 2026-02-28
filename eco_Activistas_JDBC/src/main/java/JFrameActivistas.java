@@ -288,7 +288,6 @@ public class JFrameActivistas extends javax.swing.JFrame {
 
     private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarActionPerformed
                    limpiarFormulario();
-    }
     }//GEN-LAST:event_btnLimpiarActionPerformed
 
     private void btnActualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnActualizarActionPerformed
@@ -312,7 +311,6 @@ public class JFrameActivistas extends javax.swing.JFrame {
         } else {
             jLabel7.setText("No se pudo actualizar.");
         }
-    }
     }//GEN-LAST:event_btnActualizarActionPerformed
 
     private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
@@ -382,8 +380,58 @@ public class JFrameActivistas extends javax.swing.JFrame {
         } else {
             jLabel7.setText("Error al agregar el activista.");
         }
-    }        // TODO add your handling code here:
     }//GEN-LAST:event_btnAgregarActionPerformed
+
+    private void cargarTabla() {
+        DefaultTableModel modelo = new DefaultTableModel(
+            new String[]{"ID", "Nombre", "Ap. Paterno", "Ap. Materno", "Telefono", "Fecha Inicio"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        List<Activista> lista = activistaDAO.consultarTodos();
+        for (Activista a : lista) {
+            modelo.addRow(new Object[]{
+                a.getId(),
+                a.getNombre(),
+                a.getApellidoPaterno(),
+                a.getApellidoMaterno() != null ? a.getApellidoMaterno() : "",
+                a.getTelefono(),
+                a.getFechaInicio().format(FORMATO_FECHA)
+            });
+        }
+        jTable1.setModel(modelo);
+        jLabel7.setText("Total de activistas: " + lista.size());
+    }
+
+    private void limpiarFormulario() {
+        txtID.setText("");
+        txtNombre.setText("");
+        txtApellidoPaterno.setText("");
+        txtApellidoMaterno.setText("");
+        txtTelefono.setText("");
+        txtFechaInicio.setText("");
+        jLabel7.setText("Formulario limpiado.");
+    }
+
+    private boolean validarCamposObligatorios() {
+        if (txtNombre.getText().trim().isEmpty()) { jLabel7.setText("El nombre es obligatorio."); return false; }
+        if (txtApellidoPaterno.getText().trim().isEmpty()) { jLabel7.setText("El apellido paterno es obligatorio."); return false; }
+        if (txtTelefono.getText().trim().isEmpty()) { jLabel7.setText("El telefono es obligatorio."); return false; }
+        if (txtFechaInicio.getText().trim().isEmpty()) { jLabel7.setText("La fecha es obligatoria."); return false; }
+        return true;
+    }
+
+    private LocalDate parsearFecha() {
+        try {
+            return LocalDate.parse(txtFechaInicio.getText().trim(), FORMATO_FECHA);
+        } catch (DateTimeParseException e) {
+            jLabel7.setText("Formato de fecha invalido. Usa: yyyy-MM-dd");
+            return null;
+        }
+    }
 
     /**
      * @param args the command line arguments
