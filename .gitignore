@@ -1,0 +1,19 @@
+# Build output
+target/
+
+# IDE files
+*.iml
+.idea/
+*.nbproject/
+nbproject/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# MacOS
+.DS_Store
