@@ -11,15 +11,15 @@
         <class>com.biblioteca.model.Libro</class>
 
         <properties>
-            <!-- Conexión H2 embebida (no requiere instalación externa) -->
-            <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
+            <!-- Conexión MySQL -->
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
             <property name="jakarta.persistence.jdbc.url"
-                      value="jdbc:h2:./data/biblioteca_db;AUTO_SERVER=TRUE"/>
-            <property name="jakarta.persistence.jdbc.user" value="sa"/>
-            <property name="jakarta.persistence.jdbc.password" value=""/>
+                      value="jdbc:mysql://localhost:3306/biblioteca_db?allowPublicKeyRetrieval=true&amp;serverTimezone=UTC"/>
+            <property name="jakarta.persistence.jdbc.user" value="biblioteca_user"/>
+            <property name="jakarta.persistence.jdbc.password" value="cambia_esta_clave"/>
 
             <!-- Hibernate -->
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
             <property name="hibernate.hbm2ddl.auto" value="update"/>
             <property name="hibernate.show_sql" value="true"/>
             <property name="hibernate.format_sql" value="true"/>
