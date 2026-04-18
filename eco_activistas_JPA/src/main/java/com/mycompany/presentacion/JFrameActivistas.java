@@ -1,483 +1,259 @@
 package com.mycompany.presentacion;
 
-import com.mycompany.modelo.Activista;
-import com.mycompany.persistencia.ActivistaDAOJPA;
+import com.mycompany.modelo.Libro;
 import com.mycompany.persistencia.JpaConfig;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import com.mycompany.persistencia.LibroDAO;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.time.Year;
 import java.util.List;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
 
-/**
- * Capa de Presentacion: interfaz grafica para el sistema Eco Activistas (JPA).
- * Utiliza ActivistaDAOJPA para todas las operaciones CRUD.
- *
- * @author omars
- */
-public class JFrameActivistas extends javax.swing.JFrame {
+public class JFrameActivistas extends JFrame {
 
-    private static final java.util.logging.Logger logger =
-            java.util.logging.Logger.getLogger(JFrameActivistas.class.getName());
+    private final LibroDAO libroDAO;
 
-    private final ActivistaDAOJPA activistaDAO;
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private final JTextField txtId = new JTextField();
+    private final JTextField txtTitulo = new JTextField();
+    private final JTextField txtAutor = new JTextField();
+    private final JTextField txtAnioPublicacion = new JTextField();
+    private final JTextField txtGenero = new JTextField();
 
-    /**
-     * Creates new form JFrameActivistas
-     */
+    private final JLabel lblEstado = new JLabel("Gestión de libros", SwingConstants.LEFT);
+
+    private final DefaultTableModel modeloTabla = new DefaultTableModel(
+            new String[]{"ID", "Título", "Autor", "Año publicación", "Género"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+
+    private final JTable tablaLibros = new JTable(modeloTabla);
+
     public JFrameActivistas() {
+        super("CRUD de Libros - JPA");
+        this.libroDAO = new LibroDAO();
         initComponents();
+        cargarTabla();
 
-        // Inicializar DAO con JPA (la configuracion esta en persistence.xml)
-        this.activistaDAO = new ActivistaDAOJPA();
-
-        // Cerrar EntityManagerFactory al cerrar la ventana
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 JpaConfig.close();
             }
         });
+    }
 
-        // Cargar datos iniciales
-        try {
+    private void initComponents() {
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setSize(980, 560);
+        setLocationRelativeTo(null);
+
+        JPanel panelFormulario = new JPanel(new GridLayout(6, 2, 8, 8));
+        panelFormulario.add(new JLabel("ID"));
+        panelFormulario.add(txtId);
+        panelFormulario.add(new JLabel("Título"));
+        panelFormulario.add(txtTitulo);
+        panelFormulario.add(new JLabel("Autor"));
+        panelFormulario.add(txtAutor);
+        panelFormulario.add(new JLabel("Año publicación"));
+        panelFormulario.add(txtAnioPublicacion);
+        panelFormulario.add(new JLabel("Género"));
+        panelFormulario.add(txtGenero);
+        panelFormulario.add(lblEstado);
+        panelFormulario.add(new JLabel(""));
+
+        JButton btnAgregar = new JButton("Agregar libro");
+        JButton btnMostrar = new JButton("Mostrar libros");
+        JButton btnBuscar = new JButton("Buscar por ID");
+        JButton btnActualizar = new JButton("Actualizar libro");
+        JButton btnEliminar = new JButton("Eliminar libro");
+        JButton btnLimpiar = new JButton("Limpiar");
+
+        btnAgregar.addActionListener(e -> agregarLibro());
+        btnMostrar.addActionListener(e -> cargarTabla());
+        btnBuscar.addActionListener(e -> buscarLibro());
+        btnActualizar.addActionListener(e -> actualizarLibro());
+        btnEliminar.addActionListener(e -> eliminarLibro());
+        btnLimpiar.addActionListener(e -> limpiarFormulario());
+
+        JPanel panelBotones = new JPanel(new GridLayout(2, 3, 8, 8));
+        panelBotones.add(btnAgregar);
+        panelBotones.add(btnMostrar);
+        panelBotones.add(btnBuscar);
+        panelBotones.add(btnActualizar);
+        panelBotones.add(btnEliminar);
+        panelBotones.add(btnLimpiar);
+
+        JPanel panelIzquierdo = new JPanel(new BorderLayout(10, 10));
+        panelIzquierdo.add(panelFormulario, BorderLayout.NORTH);
+        panelIzquierdo.add(panelBotones, BorderLayout.CENTER);
+
+        setLayout(new BorderLayout(10, 10));
+        add(panelIzquierdo, BorderLayout.WEST);
+        add(new JScrollPane(tablaLibros), BorderLayout.CENTER);
+    }
+
+    private void agregarLibro() {
+        Libro libro = construirLibroDesdeFormulario(false);
+        if (libro == null) {
+            return;
+        }
+
+        if (libroDAO.insertar(libro)) {
+            lblEstado.setText("Libro agregado con ID: " + libro.getId());
             cargarTabla();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                "Error al conectar con la base de datos:\n" + e.getMessage(),
-                "Error de conexion", JOptionPane.ERROR_MESSAGE);
+            limpiarFormulario();
+        } else {
+            lblEstado.setText("No se pudo agregar el libro.");
         }
     }
 
-    /**
-     * This method is called from within the constructor to initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is always
-     * regenerated by the Form Editor.
-     */
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
+    private void buscarLibro() {
+        Integer id = leerId();
+        if (id == null) {
+            return;
+        }
 
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        txtID = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
-        jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        txtNombre = new javax.swing.JTextField();
-        txtApellidoPaterno = new javax.swing.JTextField();
-        txtApellidoMaterno = new javax.swing.JTextField();
-        txtTelefono = new javax.swing.JTextField();
-        txtFechaInicio = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        btnAgregar = new javax.swing.JButton();
-        btnActualizar = new javax.swing.JButton();
-        btnEliminar = new javax.swing.JButton();
-        btnConsultar = new javax.swing.JButton();
-        btnConsultarTodos = new javax.swing.JButton();
-        btnLimpiar = new javax.swing.JButton();
-        jLabel7 = new javax.swing.JLabel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        Libro libro = libroDAO.buscarPorId(id);
+        if (libro == null) {
+            lblEstado.setText("No existe un libro con ID " + id);
+            return;
+        }
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        txtTitulo.setText(libro.getTitulo());
+        txtAutor.setText(libro.getAutor());
+        txtAnioPublicacion.setText(String.valueOf(libro.getAnioPublicacion()));
+        txtGenero.setText(libro.getGenero());
+        lblEstado.setText("Libro encontrado.");
+    }
 
-        jPanel1.setBackground(new java.awt.Color(153, 255, 255));
-        jPanel1.setToolTipText("");
+    private void actualizarLibro() {
+        Libro libro = construirLibroDesdeFormulario(true);
+        if (libro == null) {
+            return;
+        }
 
-        jLabel1.setText("ID");
-
-        txtID.setName("txtID"); // NOI18N
-        txtID.addActionListener(this::txtIDActionPerformed);
-
-        jLabel3.setText("Apellido paterno");
-
-        jLabel4.setText("Apellido materno");
-
-        jLabel5.setText("Telefono");
-
-        jLabel6.setText("Fecha inicio");
-
-        txtNombre.setName("txtNombre"); // NOI18N
-        txtNombre.addActionListener(this::txtNombreActionPerformed);
-
-        txtApellidoPaterno.addActionListener(this::txtApellidoPaternoActionPerformed);
-
-        txtApellidoMaterno.addActionListener(this::txtApellidoMaternoActionPerformed);
-
-        txtTelefono.setName("txtTelefono"); // NOI18N
-        txtTelefono.addActionListener(this::txtTelefonoActionPerformed);
-
-        txtFechaInicio.addActionListener(this::txtFechaInicioActionPerformed);
-
-        jLabel2.setText("Nombre");
-
-        btnAgregar.setText("Agregar");
-        btnAgregar.addActionListener(this::btnAgregarActionPerformed);
-
-        btnActualizar.setText("Actualizar");
-        btnActualizar.addActionListener(this::btnActualizarActionPerformed);
-
-        btnEliminar.setText("Eliminar");
-        btnEliminar.addActionListener(this::btnEliminarActionPerformed);
-
-        btnConsultar.setText("Consultar");
-        btnConsultar.addActionListener(this::btnConsultarActionPerformed);
-
-        btnConsultarTodos.setText("ConsultarTodos");
-        btnConsultarTodos.addActionListener(this::btnConsultarTodosActionPerformed);
-
-        btnLimpiar.setText("Limpiar");
-        btnLimpiar.addActionListener(this::btnLimpiarActionPerformed);
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE))
-                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 53, Short.MAX_VALUE))
-                        .addGap(63, 63, 63)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(53, 53, 53))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel6)
-                                .addGap(54, 54, 54)
-                                .addComponent(txtFechaInicio, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(txtApellidoMaterno, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                    .addComponent(txtTelefono, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(jPanel1Layout.createSequentialGroup()
-                                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGap(18, 18, 18)
-                                    .addComponent(txtApellidoPaterno, javax.swing.GroupLayout.PREFERRED_SIZE, 157, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(btnConsultar)
-                                .addGap(18, 18, 18)
-                                .addComponent(btnConsultarTodos))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(btnAgregar, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(18, 18, 18)
-                                .addComponent(btnActualizar, javax.swing.GroupLayout.PREFERRED_SIZE, 113, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(btnEliminar, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(btnLimpiar, javax.swing.GroupLayout.Alignment.TRAILING))
-                        .addGap(21, 21, 21))))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(61, 61, 61)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(15, 15, 15)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtApellidoPaterno, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtApellidoMaterno, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel4))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtTelefono, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel5))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtFechaInicio, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel6))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 90, Short.MAX_VALUE)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnAgregar)
-                    .addComponent(btnActualizar)
-                    .addComponent(btnEliminar))
-                .addGap(27, 27, 27)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnConsultar)
-                    .addComponent(btnConsultarTodos)
-                    .addComponent(btnLimpiar))
-                .addGap(34, 34, 34))
-        );
-
-        jLabel7.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
-        jLabel7.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel7.setText("Datos de activista");
-
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null}
-            },
-            new String [] {
-                "ID", "Nombre", "Apellido paterno", "Apellido materno", "Telefono", "Fecha inicio"
-            }
-        ));
-        jScrollPane1.setViewportView(jTable1);
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 616, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(23, Short.MAX_VALUE))
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 356, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(41, 41, 41)
-                .addComponent(jLabel7)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(117, Short.MAX_VALUE))
-        );
-
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
-
-    private void txtIDActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtIDActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtIDActionPerformed
-
-    private void txtApellidoMaternoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtApellidoMaternoActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtApellidoMaternoActionPerformed
-
-    private void txtNombreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtNombreActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtNombreActionPerformed
-
-    private void txtTelefonoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtTelefonoActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtTelefonoActionPerformed
-
-    private void txtApellidoPaternoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtApellidoPaternoActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtApellidoPaternoActionPerformed
-
-    private void btnLimpiarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLimpiarActionPerformed
-        limpiarFormulario();
-    }//GEN-LAST:event_btnLimpiarActionPerformed
-
-    private void btnActualizarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnActualizarActionPerformed
-        String idTexto = txtID.getText().trim();
-        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a actualizar."); return; }
-        int id;
-        try { id = Integer.parseInt(idTexto); }
-        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
-        if (!validarCamposObligatorios()) return;
-        LocalDate fecha = parsearFecha();
-        if (fecha == null) return;
-
-        String apMat = txtApellidoMaterno.getText().trim();
-        Activista a = new Activista(id, txtNombre.getText().trim(), txtApellidoPaterno.getText().trim(),
-                apMat.isEmpty() ? null : apMat, txtTelefono.getText().trim(), fecha);
-
-        if (activistaDAO.actualizar(a)) {
-            jLabel7.setText("Activista actualizado correctamente.");
+        if (libroDAO.actualizar(libro)) {
+            lblEstado.setText("Libro actualizado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } else {
-            jLabel7.setText("No se pudo actualizar.");
+            lblEstado.setText("No se pudo actualizar el libro.");
         }
-    }//GEN-LAST:event_btnActualizarActionPerformed
+    }
 
-    private void btnEliminarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEliminarActionPerformed
-        String idTexto = txtID.getText().trim();
-        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a eliminar."); return; }
-        int id;
-        try { id = Integer.parseInt(idTexto); }
-        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
+    private void eliminarLibro() {
+        Integer id = leerId();
+        if (id == null) {
+            return;
+        }
 
-        int respuesta = JOptionPane.showConfirmDialog(this,
-                "Seguro que deseas eliminar el activista con ID " + id + "?",
-                "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (respuesta != JOptionPane.YES_OPTION) return;
+        int confirmar = JOptionPane.showConfirmDialog(this,
+                "¿Eliminar el libro con ID " + id + "?",
+                "Confirmar eliminación",
+                JOptionPane.YES_NO_OPTION);
+        if (confirmar != JOptionPane.YES_OPTION) {
+            return;
+        }
 
-        if (activistaDAO.eliminar(id)) {
-            jLabel7.setText("Activista eliminado correctamente.");
+        if (libroDAO.eliminar(id)) {
+            lblEstado.setText("Libro eliminado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } else {
-            jLabel7.setText("No se pudo eliminar.");
+            lblEstado.setText("No se pudo eliminar el libro.");
         }
-    }//GEN-LAST:event_btnEliminarActionPerformed
-
-    private void btnConsultarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConsultarActionPerformed
-        String idTexto = txtID.getText().trim();
-        if (idTexto.isEmpty()) { jLabel7.setText("Escribe el ID a consultar."); return; }
-        int id;
-        try { id = Integer.parseInt(idTexto); }
-        catch (NumberFormatException ex) { jLabel7.setText("El ID debe ser un numero."); return; }
-
-        Activista a = activistaDAO.consultar(id);
-        if (a == null) { jLabel7.setText("No se encontro activista con ID " + id); return; }
-
-        txtNombre.setText(a.getNombre());
-        txtApellidoPaterno.setText(a.getApellidoPaterno());
-        txtApellidoMaterno.setText(a.getApellidoMaterno() != null ? a.getApellidoMaterno() : "");
-        txtTelefono.setText(a.getTelefono());
-        txtFechaInicio.setText(a.getFechaInicio().format(FORMATO_FECHA));
-        jLabel7.setText("Activista encontrado: " + a.getNombre());
-    }//GEN-LAST:event_btnConsultarActionPerformed
-
-    private void btnConsultarTodosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConsultarTodosActionPerformed
-        cargarTabla();
-    }//GEN-LAST:event_btnConsultarTodosActionPerformed
-
-    private void txtFechaInicioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtFechaInicioActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtFechaInicioActionPerformed
-
-    private void btnAgregarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAgregarActionPerformed
-        if (!validarCamposObligatorios()) return;
-        LocalDate fecha = parsearFecha();
-        if (fecha == null) return;
-
-        String apMat = txtApellidoMaterno.getText().trim();
-        Activista a = new Activista(txtNombre.getText().trim(), txtApellidoPaterno.getText().trim(),
-                apMat.isEmpty() ? null : apMat, txtTelefono.getText().trim(), fecha);
-
-        if (activistaDAO.agregar(a)) {
-            jLabel7.setText("Activista agregado con ID: " + a.getId());
-            cargarTabla();
-            limpiarFormulario();
-        } else {
-            jLabel7.setText("Error al agregar el activista.");
-        }
-    }//GEN-LAST:event_btnAgregarActionPerformed
+    }
 
     private void cargarTabla() {
-        DefaultTableModel modelo = new DefaultTableModel(
-            new String[]{"ID", "Nombre", "Ap. Paterno", "Ap. Materno", "Telefono", "Fecha Inicio"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-
-        List<Activista> lista = activistaDAO.consultarTodos();
-        for (Activista a : lista) {
-            modelo.addRow(new Object[]{
-                a.getId(),
-                a.getNombre(),
-                a.getApellidoPaterno(),
-                a.getApellidoMaterno() != null ? a.getApellidoMaterno() : "",
-                a.getTelefono(),
-                a.getFechaInicio().format(FORMATO_FECHA)
+        modeloTabla.setRowCount(0);
+        List<Libro> libros = libroDAO.obtenerTodos();
+        for (Libro libro : libros) {
+            modeloTabla.addRow(new Object[]{
+                libro.getId(),
+                libro.getTitulo(),
+                libro.getAutor(),
+                libro.getAnioPublicacion(),
+                libro.getGenero()
             });
         }
-        jTable1.setModel(modelo);
-        jLabel7.setText("Total de activistas: " + lista.size());
+        lblEstado.setText("Total de libros: " + libros.size());
     }
 
     private void limpiarFormulario() {
-        txtID.setText("");
-        txtNombre.setText("");
-        txtApellidoPaterno.setText("");
-        txtApellidoMaterno.setText("");
-        txtTelefono.setText("");
-        txtFechaInicio.setText("");
-        jLabel7.setText("Formulario limpiado.");
+        txtId.setText("");
+        txtTitulo.setText("");
+        txtAutor.setText("");
+        txtAnioPublicacion.setText("");
+        txtGenero.setText("");
     }
 
-    private boolean validarCamposObligatorios() {
-        if (txtNombre.getText().trim().isEmpty()) { jLabel7.setText("El nombre es obligatorio."); return false; }
-        if (txtApellidoPaterno.getText().trim().isEmpty()) { jLabel7.setText("El apellido paterno es obligatorio."); return false; }
-        if (txtTelefono.getText().trim().isEmpty()) { jLabel7.setText("El telefono es obligatorio."); return false; }
-        if (txtFechaInicio.getText().trim().isEmpty()) { jLabel7.setText("La fecha es obligatoria."); return false; }
-        return true;
-    }
-
-    private LocalDate parsearFecha() {
+    private Integer leerId() {
+        String idTexto = txtId.getText().trim();
+        if (idTexto.isEmpty()) {
+            lblEstado.setText("El ID es obligatorio.");
+            return null;
+        }
         try {
-            return LocalDate.parse(txtFechaInicio.getText().trim(), FORMATO_FECHA);
-        } catch (DateTimeParseException e) {
-            jLabel7.setText("Formato de fecha invalido. Usa: yyyy-MM-dd");
+            return Integer.valueOf(idTexto);
+        } catch (NumberFormatException ex) {
+            lblEstado.setText("El ID debe ser numérico.");
             return null;
         }
     }
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
+    private Libro construirLibroDesdeFormulario(boolean requiereId) {
+        Integer id = null;
+        if (requiereId) {
+            id = leerId();
+            if (id == null) {
+                return null;
             }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
         }
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new JFrameActivistas().setVisible(true));
-    }
+        String titulo = txtTitulo.getText().trim();
+        String autor = txtAutor.getText().trim();
+        String anioTexto = txtAnioPublicacion.getText().trim();
+        String genero = txtGenero.getText().trim();
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnActualizar;
-    private javax.swing.JButton btnAgregar;
-    private javax.swing.JButton btnConsultar;
-    private javax.swing.JButton btnConsultarTodos;
-    private javax.swing.JButton btnEliminar;
-    private javax.swing.JButton btnLimpiar;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
-    private javax.swing.JTextField txtApellidoMaterno;
-    private javax.swing.JTextField txtApellidoPaterno;
-    private javax.swing.JTextField txtFechaInicio;
-    private javax.swing.JTextField txtID;
-    private javax.swing.JTextField txtNombre;
-    private javax.swing.JTextField txtTelefono;
-    // End of variables declaration//GEN-END:variables
+        if (titulo.isEmpty() || autor.isEmpty() || anioTexto.isEmpty() || genero.isEmpty()) {
+            lblEstado.setText("Título, autor, año y género son obligatorios.");
+            return null;
+        }
+
+        int anio;
+        try {
+            anio = Integer.parseInt(anioTexto);
+        } catch (NumberFormatException ex) {
+            lblEstado.setText("El año de publicación debe ser numérico.");
+            return null;
+        }
+
+        if (anio <= 0) {
+            lblEstado.setText("El año de publicación debe ser mayor a 0.");
+            return null;
+        }
+
+        int anioMaximo = Year.now().getValue() + 1;
+        if (anio < 1000 || anio > anioMaximo) {
+            lblEstado.setText("El año debe estar entre 1000 y " + anioMaximo + ".");
+            return null;
+        }
+
+        return requiereId
+                ? new Libro(id, titulo, autor, anio, genero)
+                : new Libro(titulo, autor, anio, genero);
+    }
 }
