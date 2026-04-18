@@ -5,6 +5,7 @@ import com.mycompany.persistencia.JpaConfig;
 import com.mycompany.persistencia.LibroDAO;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.time.Year;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -242,6 +243,12 @@ public class JFrameActivistas extends JFrame {
 
         if (anio <= 0) {
             lblEstado.setText("El año de publicación debe ser mayor a 0.");
+            return null;
+        }
+
+        int anioMaximo = Year.now().getValue() + 1;
+        if (anio < 1000 || anio > anioMaximo) {
+            lblEstado.setText("El año debe estar entre 1000 y " + anioMaximo + ".");
             return null;
         }
 

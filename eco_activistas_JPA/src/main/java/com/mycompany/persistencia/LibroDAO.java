@@ -11,6 +11,8 @@ import java.util.List;
 public class LibroDAO {
 
     private final EntityManagerFactory emf;
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(LibroDAO.class.getName());
 
     public LibroDAO() {
         this.emf = JpaConfig.getEntityManagerFactory();
@@ -28,6 +30,7 @@ public class LibroDAO {
             if (tx.isActive()) {
                 tx.rollback();
             }
+            LOGGER.log(java.util.logging.Level.SEVERE, "Error al insertar libro", ex);
             return false;
         } finally {
             em.close();
@@ -41,6 +44,7 @@ public class LibroDAO {
                     "SELECT l FROM Libro l ORDER BY l.id DESC", Libro.class);
             return query.getResultList();
         } catch (Exception ex) {
+            LOGGER.log(java.util.logging.Level.SEVERE, "Error al obtener libros", ex);
             return Collections.emptyList();
         } finally {
             em.close();
@@ -68,6 +72,7 @@ public class LibroDAO {
             if (tx.isActive()) {
                 tx.rollback();
             }
+            LOGGER.log(java.util.logging.Level.SEVERE, "Error al actualizar libro", ex);
             return false;
         } finally {
             em.close();
@@ -91,6 +96,7 @@ public class LibroDAO {
             if (tx.isActive()) {
                 tx.rollback();
             }
+            LOGGER.log(java.util.logging.Level.SEVERE, "Error al eliminar libro", ex);
             return false;
         } finally {
             em.close();
