@@ -94,8 +94,12 @@ public class Main {
         int anio = leerEntero(scanner, "Nuevo año de publicación: ");
         String genero = leerTexto(scanner, "Nuevo género: ");
 
-        Libro actualizado = new Libro(id, titulo, autor, anio, genero);
-        boolean ok = libroDAO.actualizar(actualizado);
+        existente.setTitulo(titulo);
+        existente.setAutor(autor);
+        existente.setAnioPublicacion(anio);
+        existente.setGenero(genero);
+
+        boolean ok = libroDAO.actualizar(existente);
         if (ok) {
             System.out.println("Libro actualizado correctamente.");
         } else {
