@@ -3,8 +3,7 @@ package com.mycompany;
 import com.mycompany.presentacion.JFrameActivistas;
 
 /**
- * Punto de entrada de la aplicacion Eco Activistas JPA.
- * Lanza la interfaz grafica en el hilo de eventos de Swing.
+ * Punto de entrada de la aplicacion de gestion de libros con JPA.
  */
 public class Main {
 
